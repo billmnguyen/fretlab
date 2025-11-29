@@ -1,0 +1,489 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FretLab - Ultimate Sync Mode</title>
+  <!-- Load Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Load jsmediatags for local file metadata (artwork/title) extraction -->
+  <script src="https://cdn.jsdelivr.net/npm/jsmediatags@3.9.7/dist/jsmediatags.min.js"></script>
+  
+  <style>
+    /* --- CSS: FretLab Clean Modern Theme (Futura ExtraBold) --- */
+    
+    :root {
+      --background-dark: #101010;
+      --text-light: #FFFFFF;
+      --accent-cyan: #00FFFF;
+      --active-bg: rgba(0, 255, 255, 0.15);
+      
+      /* Font settings for Futura ExtraBold effect */
+      --main-font: 'Futura', 'Century Gothic', 'Inter', sans-serif;
+    }
+
+    body {
+      background: var(--background-dark);
+      color: var(--text-light);
+      font-family: var(--main-font);
+      font-weight: 900;
+      min-height: 100vh;
+      line-height: 1.4;
+    }
+
+    /* Apply the font style to ALL elements */
+    * {
+        font-family: var(--main-font) !important;
+        font-weight: 900 !important;
+    }
+
+    /* Scrollbar (Clean Cyan) */
+    .lyrics::-webkit-scrollbar { width: 6px; }
+    .lyrics::-webkit-scrollbar-track { background: #202020; border-radius: 3px; }
+    .lyrics::-webkit-scrollbar-thumb { background: var(--accent-cyan); border-radius: 3px; }
+
+    /* Chord Styling */
+    .chord {
+      color: var(--accent-cyan);
+      font-weight: 900;
+      margin-right: 16px;
+      display: inline-block;
+      min-width: 70px;
+      font-size: 1.1em;
+      text-shadow: 0 0 5px rgba(0, 255, 255, 0.3);
+    }
+
+    /* Lyric Line Styling */
+    .lyric-line {
+      margin-bottom: 18px;
+      padding: 12px;
+      border-radius: 8px;
+      transition: all 0.2s ease;
+      border-left: 3px solid transparent;
+      font-size: 1.1rem;
+      color: rgba(255, 255, 255, 0.6);
+    }
+
+    /* Active State (Sync Highlight) */
+    .active {
+      background: var(--active-bg); 
+      border-left: 3px solid var(--accent-cyan);
+      padding-left: 18px;
+      color: var(--text-light);
+      transform: scale(1.005);
+      box-shadow: 0 0 10px rgba(0, 255, 255, 0.2);
+    }
+
+    /* UI elements */
+    .control-btn, .action-label {
+        background-color: #333333;
+        border: 1px solid #444444;
+        transition: background-color 0.15s;
+    }
+    .control-btn:hover:not(:disabled), .action-label:hover {
+        background-color: #444444;
+        box-shadow: 0 0 15px rgba(0, 255, 255, 0.5); 
+    }
+    .song-info {
+        background-color: #1a1a1a;
+        border: 1px solid #333333;
+    }
+    .lyrics-card {
+        background-color: #1a1a1a;
+        border: 1px solid #333333;
+    }
+  </style>
+</head>
+
+<body class="flex justify-center items-start p-6 sm:p-8">
+
+  <div class="container max-w-xl w-full flex flex-col items-center space-y-6">
+
+    <!-- Header -->
+    <h1 class="text-4xl sm:text-5xl text-white mt-4 tracking-wider">FRET-LAB</h1>
+    <p class="text-lg text-gray-400 mb-6">ULTIMATE SYNC MODE</p>
+
+    <!-- Audio Element (Used by JS) -->
+    <audio id="player" style="display:none;"></audio>
+
+    <!-- Song Info Card -->
+    <div id="songInfoCard" class="song-info flex w-full p-4 rounded-xl shadow-lg">
+      <div id="coverArtContainer" class="album-cover w-24 h-24 mr-4 rounded-md overflow-hidden flex-shrink-0 border-2 border-cyan-500">
+        <!-- Default/Dynamic Image Placeholder -->
+        <img id="albumArt" src="https://upload.wikimedia.org/wikipedia/en/a/a0/Blonde_-_Frank_Ocean.jpeg" alt="Album Cover" class="w-full h-full object-cover">
+      </div>
+      <div class="song-details flex flex-col justify-center w-full">
+        <h2 id="songTitle" class="text-2xl text-white mb-1">SELF CONTROL</h2>
+        <p id="songArtist" class="text-md text-cyan-400 mb-3">FRANK OCEAN</p>
+        
+        <!-- File Loader -->
+        <div class="flex space-x-2 mt-2">
+            <label class="action-label cursor-pointer w-1/2 text-white py-2 px-1 rounded transition text-sm text-center">
+              📂 LOAD LOCAL MP3
+              <input type="file" id="audioFile" accept="audio/mp3, audio/wav, audio/flac, audio/ogg" class="hidden">
+            </label>
+            <button id="youtubeLoadBtn" class="action-label w-1/2 text-white py-2 px-1 rounded transition text-sm text-center">
+              ▶️ YOUTUBE (BETA)
+            </button>
+        </div>
+        <p id="fileNameDisplay" class="text-xs text-gray-500 mt-1 italic">Load a file or try the YouTube simulator.</p>
+      </div>
+    </div>
+
+    <!-- Playback Controls -->
+    <div class="controls flex space-x-4">
+      <button id="play" class="control-btn px-8 py-3 text-white rounded-full transition duration-300 disabled:opacity-30 disabled:cursor-not-allowed text-lg" disabled>▶️ PLAY</button>
+      <button id="stop" class="control-btn px-8 py-3 text-white rounded-full transition duration-300 disabled:opacity-30 disabled:cursor-not-allowed text-lg" disabled>⏹️ STOP</button>
+    </div>
+
+    <!-- Lyrics & Chords Display -->
+    <div class="lyrics-card w-full p-6 rounded-xl shadow-xl">
+      <div class="lyrics h-96 overflow-y-auto" id="lyrics">
+        <!-- Content populated by JS -->
+      </div>
+    </div>
+
+    <!-- YouTube Input Modal (Simulated) -->
+    <div id="youtubeModal" class="hidden fixed inset-0 bg-black bg-opacity-80 z-50 flex justify-center items-center p-4">
+        <div class="bg-gray-800 p-6 rounded-xl w-full max-w-md space-y-4 border border-cyan-500">
+            <h3 class="text-xl text-white">YOUTUBE SIMULATOR</h3>
+            <p class="text-sm text-gray-400">NOTE: Direct YouTube streaming/caption extraction is blocked by security policies. This simulates loading a song using the pre-loaded data.</p>
+            <input type="text" id="youtubeUrl" placeholder="Enter 'Self Control' or 'Wonderwall' URL" 
+                   class="w-full p-3 bg-gray-900 border border-gray-700 rounded text-white placeholder-gray-500 focus:ring-cyan-500 focus:border-cyan-500">
+            <div class="flex justify-end space-x-3">
+                <button id="closeModalBtn" class="control-btn px-4 py-2 rounded text-sm">CANCEL</button>
+                <button id="loadYoutubeBtn" class="control-btn bg-cyan-700 hover:bg-cyan-600 px-4 py-2 rounded text-sm">SIMULATE LOAD</button>
+            </div>
+        </div>
+    </div>
+
+  </div>
+
+  <script>
+    // --- JAVASCRIPT: Logic and Data ---
+    const audioFileInput = document.getElementById("audioFile");
+    const fileNameDisplay = document.getElementById("fileNameDisplay");
+    const playBtn = document.getElementById("play");
+    const stopBtn = document.getElementById("stop");
+    const lyricsContainer = document.getElementById("lyrics");
+    const audioPlayer = document.getElementById("player");
+    const songTitleElement = document.getElementById("songTitle");
+    const songArtistElement = document.getElementById("songArtist");
+    const albumArtElement = document.getElementById("albumArt");
+    const youtubeLoadBtn = document.getElementById("youtubeLoadBtn");
+    const youtubeModal = document.getElementById("youtubeModal");
+    const closeModalBtn = document.getElementById("closeModalBtn");
+    const loadYoutubeBtn = document.getElementById("loadYoutubeBtn");
+    const youtubeUrlInput = document.getElementById("youtubeUrl");
+
+
+    let currentSongData = null;
+    let animationFrame;
+
+    // --- SONG DATA DATABASE ---
+    const songDatabase = {
+      // FRANK OCEAN - SELF CONTROL (UPDATED CHORDS: Am - G - C - F progression for verse/hook)
+      "SELF CONTROL": {
+        artist: "FRANK OCEAN",
+        defaultImage: "https://upload.wikimedia.org/wikipedia/en/a/a0/Blonde_-_Frank_Ocean.jpeg",
+        lyrics: [ 
+            {time: 0.0, chord:'N.C.', lyric:'(Ambiance)'},
+            {time: 1.0, chord:'N.C.', lyric:'Poolside convo about your summer last night, oh yeah'},
+            {time: 3.8, chord:'N.C.', lyric:'About your summer last night'},
+            {time: 6.0, chord:'N.C.', lyric:'Ain\'t give you no play, mm'},
+            
+            // Core Progression: Am - G - C - F
+            {time: 8.8, chord:'Am', lyric:'Could I make it shine last night?'},
+            {time: 11.5, chord:'G', lyric:'Could I make it shine on it last night, last night?'},
+            {time: 14.8, chord:'C', lyric:'Could we make it in? Do we have time?'},
+            
+            // Verse 1
+            {time: 18.0, chord:'F', lyric:'I\'ll be the boyfriend in your wet dreams tonight'},
+            {time: 21.5, chord:'Am', lyric:'Noses on a rail, little virgin wears the white'},
+            {time: 24.8, chord:'G', lyric:'You cut your hair but you used to live a blonded life'},
+            {time: 28.3, chord:'C', lyric:'Wish I was there, wish we had grown up on the same advice'},
+            {time: 31.8, chord:'F', lyric:'And our time was right'},
+            
+            // Chorus/Hook 1
+            {time: 34.0, chord:'Am', lyric:'Keep a place for me, for me'},
+            {time: 37.0, chord:'G', lyric:'I\'ll sleep between y\'all, it\'s nothing'},
+            {time: 39.5, chord:'C', lyric:'It\'s no thing, it\'s nothing'},
+            {time: 43.0, chord:'F', lyric:'Keep a place for me, for me'},
+            
+            // Verse 2
+            {time: 46.0, chord:'Am', lyric:'Now and then you miss it, sounds make you cry'},
+            {time: 49.3, chord:'G', lyric:'Some nights you dance with tears in your eyes'},
+            {time: 52.5, chord:'C', lyric:'I came to visit, \'cause you see me like a UFO'},
+            {time: 56.0, chord:'F', lyric:'That\'s like never, \'cause I made you use your self-control'},
+            {time: 59.5, chord:'Am', lyric:'And you made me lose my self-control, my self-control'},
+            
+            // Hook 2
+            {time: 64.0, chord:'G', lyric:'Keep a place for me, for me'},
+            {time: 67.5, chord:'C', lyric:'I\'ll sleep between y\'all, it\'s no thing'},
+            {time: 70.0, chord:'F', lyric:'Keep a place for me'},
+            {time: 73.0, chord:'Am', lyric:'It\'s no thing, it\'s nothing'},
+            {time: 76.5, chord:'G', lyric:'It\'s no thing, it\'s nothing'},
+            
+            // Bridge/Transition
+            {time: 80.0, chord:'C', lyric:'Sometimes you\'ll miss it'},
+            {time: 83.0, chord:'F', lyric:'And the sound will make you cry'},
+            {time: 86.0, chord:'Am', lyric:'And some nights you\'re dancing'},
+            {time: 89.0, chord:'G', lyric:'With tears in your eyes'},
+            
+            // Outro section (Generally agreed): C - Am - F - G
+            {time: 92.0, chord:'C', lyric:'I, I, I know you gotta leave, leave, leave'},
+            {time: 95.5, chord:'Am', lyric:'Take down some summer time'},
+            {time: 98.0, chord:'F', lyric:'Give us, just tonight, night, night'},
+            {time: 102.0, chord:'G', lyric:'I, I, I know you got someone comin\''},
+            {time: 105.0, chord:'C', lyric:'You\'re spittin\' game, know you got it'},
+            {time: 160.0, chord:'G', lyric:'(Outro fades with repeated vocals/guitar)'},
+            {time: 249.0, chord:'N.C.', lyric:'(End)'},
+        ]
+      },
+      
+      // OASIS - WONDERWALL (New song data)
+      "WONDERWALL": {
+        artist: "OASIS",
+        defaultImage: "https://placehold.co/100x100/333333/00FFFF?text=W.",
+        lyrics: [
+            {time: 0.0, chord:'N.C.', lyric:'(Intro drums)'},
+            {time: 6.0, chord:'Em7', lyric:'Today is gonna be the day'},
+            {time: 8.5, chord:'G', lyric:'That they\'re gonna throw it back to you'},
+            {time: 11.0, chord:'Dsus4', lyric:'By now you should\'ve somehow'},
+            {time: 13.5, chord:'A7sus4', lyric:'Realized what you gotta do'},
+            {time: 17.0, chord:'Em7', lyric:'I don\'t believe that anybody'},
+            {time: 19.5, chord:'G', lyric:'Feels the way I do about you now'},
+            {time: 23.0, chord:'Dsus4', lyric:'Backbeat the word is on the street'},
+            {time: 25.5, chord:'A7sus4', lyric:'That the fire in your heart is out'},
+            {time: 29.0, chord:'F', lyric:'I\'m sure you\'ve heard it all before'},
+            {time: 33.0, chord:'C', lyric:'But you never really had a doubt'},
+            {time: 36.0, chord:'G', lyric:'I don\'t believe that anybody'},
+            {time: 40.0, chord:'F', lyric:'Feels the way I do about you now'},
+            {time: 44.0, chord:'C', lyric:'And all the roads we have to walk are winding'},
+            {time: 48.0, chord:'G', lyric:'And all the lights that lead us there are blinding'},
+            {time: 51.0, chord:'Am', lyric:'There are many things that I'},
+            {time: 54.0, chord:'G', lyric:'Would like to say to you, but I don\'t know how'},
+            {time: 57.0, chord:'C', lyric:'Because maybe'},
+            {time: 58.5, chord:'G', lyric:'You\'re gonna be the one that saves me'},
+            {time: 62.0, chord:'Am', lyric:'And after all'},
+            {time: 64.0, chord:'Em', lyric:'You\'re my wonderwall'},
+            {time: 68.0, chord:'N.C.', lyric:'(Instrumental break)'},
+            {time: 75.0, chord:'N.C.', lyric:'(End of sample data)'},
+        ]
+      }
+    };
+    
+    // --- UTILITY FUNCTIONS ---
+
+    function formatTitle(filename) {
+        let title = filename.replace(/\.[^/.]+$/, ""); 
+        title = title.replace(/[-_]/g, ' ').toUpperCase().trim();
+        return title.length > 0 ? title : "UNKNOWN SONG";
+    }
+
+    function getSongKeyByFilename(filename) {
+        const title = formatTitle(filename);
+        if (title.includes("CONTROL")) return "SELF CONTROL";
+        if (title.includes("WONDERWALL")) return "WONDERWALL";
+        return "SELF CONTROL"; // Default to Self Control
+    }
+    
+    function resetPlayerState() {
+        audioPlayer.pause();
+        audioPlayer.currentTime = 0;
+        playBtn.textContent = "▶️ PLAY";
+        cancelAnimationFrame(animationFrame);
+        Array.from(lyricsContainer.children).forEach(l => l.classList.remove('active'));
+        lyricsContainer.scrollTop = 0;
+    }
+
+    // --- UI/DATA HANDLING FUNCTIONS ---
+
+    function updateUI(songKey, localFile) {
+        const data = songDatabase[songKey];
+        if (!data) return;
+
+        currentSongData = data.lyrics;
+        songTitleElement.textContent = songKey;
+        songArtistElement.textContent = data.artist;
+        albumArtElement.src = data.defaultImage; // Reset to default placeholder
+
+        if (localFile) {
+            fileNameDisplay.textContent = `LOADED: ${localFile.name.toUpperCase()}`;
+            fileNameDisplay.style.color = "var(--accent-cyan)";
+            extractArtwork(localFile);
+        } else {
+            fileNameDisplay.textContent = "NOTE: Simulated YouTube load active.";
+            fileNameDisplay.style.color = "yellow";
+        }
+        
+        renderLyrics();
+        // Enable controls only if media source is set (which it is for local, or simulated for youtube)
+        playBtn.disabled = false;
+        stopBtn.disabled = false;
+    }
+
+    function renderLyrics() {
+        lyricsContainer.innerHTML = '';
+        currentSongData.forEach((line) => {
+            const div = document.createElement('div');
+            div.classList.add('lyric-line');
+            div.innerHTML = `<span class="chord">${line.chord}</span>${line.lyric}`;
+            lyricsContainer.appendChild(div);
+        });
+    }
+
+    // --- ARTWORK EXTRACTION (jsmediatags) ---
+    function extractArtwork(file) {
+        try {
+             jsmediatags.read(file, {
+                onSuccess: function(tag) {
+                    if (tag.tags.picture) {
+                        const picture = tag.tags.picture;
+                        const base64String = arrayBufferToBase64(picture.data);
+                        albumArtElement.src = `data:${picture.format};base64,${base64String}`;
+                        fileNameDisplay.textContent += " (Artwork Found)";
+                        fileNameDisplay.style.color = "var(--accent-cyan)";
+                    } else {
+                        // console.log("No artwork found in tags.");
+                    }
+                },
+                onError: function(error) {
+                    // console.log("Error reading tags:", error.type);
+                }
+            });
+        } catch(e) {
+            // console.error("jsmediatags failed:", e);
+        }
+    }
+    
+    function arrayBufferToBase64(buffer) {
+        let binary = '';
+        const bytes = new Uint8Array(buffer);
+        const len = bytes.byteLength;
+        for (let i = 0; i < len; i++) {
+            binary += String.fromCharCode(bytes[i]);
+        }
+        return window.btoa(binary);
+    }
+
+    // --- SYNC CORE LOGIC ---
+
+    function updateSync(currentTime) {
+        const lines = lyricsContainer.children;
+        
+        for(let idx = 0; idx < currentSongData.length; idx++) {
+            const line = currentSongData[idx];
+            const div = lines[idx];
+            const nextTime = currentSongData[idx + 1]?.time || Infinity;
+
+            if (currentTime >= line.time && currentTime < nextTime) {
+                if (!div.classList.contains('active')) {
+                    Array.from(lines).forEach(l => l.classList.remove('active'));
+                    div.classList.add('active');
+                    div.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }
+                break; 
+            }
+        }
+    }
+
+    function syncLoop() {
+        if (!audioPlayer.paused) {
+            updateSync(audioPlayer.currentTime);
+            animationFrame = requestAnimationFrame(syncLoop);
+        }
+    }
+
+    // --- EVENT LISTENERS ---
+
+    // 1. Local File Load
+    audioFileInput.addEventListener('change', (event) => {
+        const file = event.target.files[0];
+        if (file) {
+            resetPlayerState();
+            const fileUrl = URL.createObjectURL(file);
+            audioPlayer.src = fileUrl;
+            
+            const songKey = getSongKeyByFilename(file.name);
+            updateUI(songKey, file);
+        }
+    });
+
+    // 2. YouTube Modal Control
+    youtubeLoadBtn.addEventListener('click', () => {
+        youtubeModal.classList.remove('hidden');
+    });
+
+    closeModalBtn.addEventListener('click', () => {
+        youtubeModal.classList.add('hidden');
+        youtubeUrlInput.value = '';
+    });
+
+    loadYoutubeBtn.addEventListener('click', () => {
+        const url = youtubeUrlInput.value.toUpperCase();
+        youtubeModal.classList.add('hidden');
+        resetPlayerState();
+
+        // SIMULATION LOGIC: Find a matching song key or default
+        let songKey = "SELF CONTROL"; // Default
+        if (url.includes("WONDERWALL")) {
+            songKey = "WONDERWALL";
+        }
+        
+        // Cannot stream YouTube audio. Reset player and inform user.
+        audioPlayer.src = '';
+        
+        updateUI(songKey, null); // Load static lyrics
+        
+        fileNameDisplay.textContent = `⚠️ YOUTUBE LOAD SIMULATED. Audio file required for playback.`;
+        fileNameDisplay.style.color = "#FFD700"; // Gold/Warning color
+        playBtn.disabled = true; // Disable play button as no audio source is loaded
+    });
+
+
+    // 3. Playback Controls
+    playBtn.addEventListener('click', () => {
+        if (!audioPlayer.src) {
+            fileNameDisplay.textContent = "❗ ERROR: NO VALID AUDIO SOURCE LOADED ❗";
+            fileNameDisplay.style.color = "#FF0000";
+            return;
+        }
+
+        if (audioPlayer.paused) {
+            audioPlayer.play().then(() => {
+                playBtn.textContent = "⏸️ PAUSE";
+                syncLoop();
+            }).catch(err => {
+                console.error("Playback Error:", err);
+                fileNameDisplay.textContent = "PLAYBACK FAILED. BROWSER BLOCKED AUTOPLAY OR FILE IS CORRUPT.";
+                fileNameDisplay.style.color = "#FF0000";
+            });
+        } else {
+            audioPlayer.pause();
+            playBtn.textContent = "▶️ PLAY";
+            cancelAnimationFrame(animationFrame);
+        }
+    });
+
+    stopBtn.addEventListener('click', () => {
+        resetPlayerState();
+    });
+
+    audioPlayer.addEventListener('ended', () => {
+        stopBtn.click();
+    });
+
+    // Initial load
+    document.addEventListener('DOMContentLoaded', init);
+    function init() {
+        updateUI("SELF CONTROL", null); // Initial load of default song data
+        // Set play/stop to disabled until a local file is chosen
+        playBtn.disabled = true;
+        stopBtn.disabled = true;
+    }
+
+  </script>
+</body>
+</html>
