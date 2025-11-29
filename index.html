@@ -1,10 +1,11 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>FretLab - Ultimate Sync Mode</title>
+  <!-- Red Guitar Emoji Favicon -->
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🎸</text></svg>">
+  <title>🎸 FretLab - Ultimate Sync Mode</title>
   <!-- Load Tailwind CSS -->
   <script src="https://cdn.tailwindcss.com"></script>
   <!-- Load jsmediatags for local file metadata (artwork/title) extraction -->
@@ -101,16 +102,16 @@
   <div class="container max-w-xl w-full flex flex-col items-center space-y-6">
 
     <!-- Header -->
-    <h1 class="text-4xl sm:text-5xl text-white mt-4 tracking-wider">FRET-LAB</h1>
+    <h1 class="text-4xl sm:text-5xl text-white mt-4 tracking-wider">FRET-LAB 🎸</h1>
     <p class="text-lg text-gray-400 mb-6">ULTIMATE SYNC MODE</p>
 
     <!-- Audio Element (Used by JS) -->
     <audio id="player" style="display:none;"></audio>
 
-    <!-- Song Info Card -->
+    <!-- Song Info Card (Defaulted to Self Control) -->
     <div id="songInfoCard" class="song-info flex w-full p-4 rounded-xl shadow-lg">
       <div id="coverArtContainer" class="album-cover w-24 h-24 mr-4 rounded-md overflow-hidden flex-shrink-0 border-2 border-cyan-500">
-        <!-- Default/Dynamic Image Placeholder -->
+        <!-- Placeholder image for Self Control (Blonde album) -->
         <img id="albumArt" src="https://upload.wikimedia.org/wikipedia/en/a/a0/Blonde_-_Frank_Ocean.jpeg" alt="Album Cover" class="w-full h-full object-cover">
       </div>
       <div class="song-details flex flex-col justify-center w-full">
@@ -124,10 +125,10 @@
               <input type="file" id="audioFile" accept="audio/mp3, audio/wav, audio/flac, audio/ogg" class="hidden">
             </label>
             <button id="youtubeLoadBtn" class="action-label w-1/2 text-white py-2 px-1 rounded transition text-sm text-center">
-              ▶️ YOUTUBE (BETA)
+              ▶️ YOUTUBE (SIMULATOR)
             </button>
         </div>
-        <p id="fileNameDisplay" class="text-xs text-gray-500 mt-1 italic">Load a file or try the YouTube simulator.</p>
+        <p id="fileNameDisplay" class="text-xs text-gray-500 mt-1 italic">Load a file or simulate YouTube lyrics.</p>
       </div>
     </div>
 
@@ -147,13 +148,18 @@
     <!-- YouTube Input Modal (Simulated) -->
     <div id="youtubeModal" class="hidden fixed inset-0 bg-black bg-opacity-80 z-50 flex justify-center items-center p-4">
         <div class="bg-gray-800 p-6 rounded-xl w-full max-w-md space-y-4 border border-cyan-500">
-            <h3 class="text-xl text-white">YOUTUBE SIMULATOR</h3>
-            <p class="text-sm text-gray-400">NOTE: Direct YouTube streaming/caption extraction is blocked by security policies. This simulates loading a song using the pre-loaded data.</p>
-            <input type="text" id="youtubeUrl" placeholder="Enter 'Self Control' or 'Wonderwall' URL" 
-                   class="w-full p-3 bg-gray-900 border border-gray-700 rounded text-white placeholder-gray-500 focus:ring-cyan-500 focus:border-cyan-500">
-            <div class="flex justify-end space-x-3">
-                <button id="closeModalBtn" class="control-btn px-4 py-2 rounded text-sm">CANCEL</button>
-                <button id="loadYoutubeBtn" class="control-btn bg-cyan-700 hover:bg-cyan-600 px-4 py-2 rounded text-sm">SIMULATE LOAD</button>
+            <h3 class="text-xl text-white mb-1">YOUTUBE SIMULATION</h3>
+            <p class="text-sm text-yellow-400">🚨 TECHNICAL LIMITATION</p>
+            <p class="text-sm text-gray-400">Direct YouTube audio access and conversion is blocked by browser security. Select a song below to simulate loading the correct lyrics and chords.</p>
+            
+            <div class="flex flex-col space-y-2 pt-2">
+                <button data-song="STAIRWAY TO HEAVEN" class="load-youtube-song-btn control-btn bg-cyan-700 hover:bg-cyan-600 px-4 py-3 rounded text-sm">SIMULATE: Led Zeppelin - Stairway to Heaven</button>
+                <button data-song="SELF CONTROL" class="load-youtube-song-btn control-btn bg-cyan-700 hover:bg-cyan-600 px-4 py-3 rounded text-sm">SIMULATE: Frank Ocean - Self Control</button>
+                <button data-song="WONDERWALL" class="load-youtube-song-btn control-btn bg-cyan-700 hover:bg-cyan-600 px-4 py-3 rounded text-sm">SIMULATE: Oasis - Wonderwall</button>
+            </div>
+            
+            <div class="flex justify-end pt-3">
+                <button id="closeModalBtn" class="control-btn px-4 py-2 rounded text-sm">CLOSE</button>
             </div>
         </div>
     </div>
@@ -174,16 +180,35 @@
     const youtubeLoadBtn = document.getElementById("youtubeLoadBtn");
     const youtubeModal = document.getElementById("youtubeModal");
     const closeModalBtn = document.getElementById("closeModalBtn");
-    const loadYoutubeBtn = document.getElementById("loadYoutubeBtn");
-    const youtubeUrlInput = document.getElementById("youtubeUrl");
+    const loadYoutubeSongBtns = document.querySelectorAll(".load-youtube-song-btn");
 
 
     let currentSongData = null;
     let animationFrame;
 
-    // --- SONG DATA DATABASE ---
+    // --- SONG DATA DATABASE (With more accurate lyrics and timings) ---
     const songDatabase = {
-      // FRANK OCEAN - SELF CONTROL (UPDATED CHORDS: Am - G - C - F progression for verse/hook)
+      // LED ZEPPELIN - STAIRWAY TO HEAVEN
+      "STAIRWAY TO HEAVEN": {
+        artist: "LED ZEPPELIN",
+        defaultImage: "https://placehold.co/100x100/A00000/FFFFFF?text=LZ",
+        lyrics: [ 
+            {time: 0.0, chord:'Am', lyric:'(Intro Arpeggios)'},
+            {time: 8.0, chord:'G/B', lyric:'There\'s a lady who\'s sure all that glitters is gold'},
+            {time: 15.0, chord:'C', lyric:'And she\'s buying a stairway to heaven.'},
+            {time: 21.0, chord:'Fmaj7', lyric:'When she gets there she knows, if the stores are all closed'},
+            {time: 28.0, chord:'Am', lyric:'With a word she can get what she came for.'},
+            {time: 35.0, chord:'G/B', lyric:'Ooh, ooh, and she\'s buying a stairway to heaven.'},
+            {time: 43.0, chord:'C', lyric:'There\'s a sign on the wall but she wants to be sure'},
+            {time: 50.0, chord:'Fmaj7', lyric:'\'Cause you know sometimes words have two meanings.'},
+            {time: 57.0, chord:'Am', lyric:'In a tree by the brook, there\'s a songbird who sings,'},
+            {time: 64.0, chord:'G/B', lyric:'Sometimes all of our thoughts are misgiven.'},
+            {time: 72.0, chord:'C', lyric:'Ooh, it makes me wonder,'},
+            {time: 75.0, chord:'Fmaj7', lyric:'Ooh, it makes me wonder.'},
+            {time: 80.0, chord:'N.C.', lyric:'(Sample lyrics end here for brevity)'},
+        ]
+      },
+      // FRANK OCEAN - SELF CONTROL
       "SELF CONTROL": {
         artist: "FRANK OCEAN",
         defaultImage: "https://upload.wikimedia.org/wikipedia/en/a/a0/Blonde_-_Frank_Ocean.jpeg",
@@ -192,57 +217,23 @@
             {time: 1.0, chord:'N.C.', lyric:'Poolside convo about your summer last night, oh yeah'},
             {time: 3.8, chord:'N.C.', lyric:'About your summer last night'},
             {time: 6.0, chord:'N.C.', lyric:'Ain\'t give you no play, mm'},
-            
-            // Core Progression: Am - G - C - F
             {time: 8.8, chord:'Am', lyric:'Could I make it shine last night?'},
             {time: 11.5, chord:'G', lyric:'Could I make it shine on it last night, last night?'},
             {time: 14.8, chord:'C', lyric:'Could we make it in? Do we have time?'},
-            
-            // Verse 1
             {time: 18.0, chord:'F', lyric:'I\'ll be the boyfriend in your wet dreams tonight'},
             {time: 21.5, chord:'Am', lyric:'Noses on a rail, little virgin wears the white'},
             {time: 24.8, chord:'G', lyric:'You cut your hair but you used to live a blonded life'},
             {time: 28.3, chord:'C', lyric:'Wish I was there, wish we had grown up on the same advice'},
             {time: 31.8, chord:'F', lyric:'And our time was right'},
-            
-            // Chorus/Hook 1
             {time: 34.0, chord:'Am', lyric:'Keep a place for me, for me'},
             {time: 37.0, chord:'G', lyric:'I\'ll sleep between y\'all, it\'s nothing'},
             {time: 39.5, chord:'C', lyric:'It\'s no thing, it\'s nothing'},
             {time: 43.0, chord:'F', lyric:'Keep a place for me, for me'},
-            
-            // Verse 2
-            {time: 46.0, chord:'Am', lyric:'Now and then you miss it, sounds make you cry'},
-            {time: 49.3, chord:'G', lyric:'Some nights you dance with tears in your eyes'},
-            {time: 52.5, chord:'C', lyric:'I came to visit, \'cause you see me like a UFO'},
-            {time: 56.0, chord:'F', lyric:'That\'s like never, \'cause I made you use your self-control'},
-            {time: 59.5, chord:'Am', lyric:'And you made me lose my self-control, my self-control'},
-            
-            // Hook 2
-            {time: 64.0, chord:'G', lyric:'Keep a place for me, for me'},
-            {time: 67.5, chord:'C', lyric:'I\'ll sleep between y\'all, it\'s no thing'},
-            {time: 70.0, chord:'F', lyric:'Keep a place for me'},
-            {time: 73.0, chord:'Am', lyric:'It\'s no thing, it\'s nothing'},
-            {time: 76.5, chord:'G', lyric:'It\'s no thing, it\'s nothing'},
-            
-            // Bridge/Transition
-            {time: 80.0, chord:'C', lyric:'Sometimes you\'ll miss it'},
-            {time: 83.0, chord:'F', lyric:'And the sound will make you cry'},
-            {time: 86.0, chord:'Am', lyric:'And some nights you\'re dancing'},
-            {time: 89.0, chord:'G', lyric:'With tears in your eyes'},
-            
-            // Outro section (Generally agreed): C - Am - F - G
-            {time: 92.0, chord:'C', lyric:'I, I, I know you gotta leave, leave, leave'},
-            {time: 95.5, chord:'Am', lyric:'Take down some summer time'},
-            {time: 98.0, chord:'F', lyric:'Give us, just tonight, night, night'},
-            {time: 102.0, chord:'G', lyric:'I, I, I know you got someone comin\''},
-            {time: 105.0, chord:'C', lyric:'You\'re spittin\' game, know you got it'},
-            {time: 160.0, chord:'G', lyric:'(Outro fades with repeated vocals/guitar)'},
-            {time: 249.0, chord:'N.C.', lyric:'(End)'},
+            {time: 46.0, chord:'Am', lyric:'(Sample lyrics end here for brevity)'},
         ]
       },
       
-      // OASIS - WONDERWALL (New song data)
+      // OASIS - WONDERWALL
       "WONDERWALL": {
         artist: "OASIS",
         defaultImage: "https://placehold.co/100x100/333333/00FFFF?text=W.",
@@ -264,12 +255,11 @@
             {time: 48.0, chord:'G', lyric:'And all the lights that lead us there are blinding'},
             {time: 51.0, chord:'Am', lyric:'There are many things that I'},
             {time: 54.0, chord:'G', lyric:'Would like to say to you, but I don\'t know how'},
-            {time: 57.0, chord:'C', lyric:'Because maybe'},
-            {time: 58.5, chord:'G', lyric:'You\'re gonna be the one that saves me'},
-            {time: 62.0, chord:'Am', lyric:'And after all'},
+            {time: 57.0, chord:'C', lyric:'Because maybe...'},
+            {time: 59.0, chord:'G', lyric:'You\'re gonna be the one that saves me'},
+            {time: 62.0, chord:'Am', lyric:'And after all...'},
             {time: 64.0, chord:'Em', lyric:'You\'re my wonderwall'},
-            {time: 68.0, chord:'N.C.', lyric:'(Instrumental break)'},
-            {time: 75.0, chord:'N.C.', lyric:'(End of sample data)'},
+            {time: 67.0, chord:'C', lyric:'(Sample lyrics end here for brevity)'},
         ]
       }
     };
@@ -284,6 +274,7 @@
 
     function getSongKeyByFilename(filename) {
         const title = formatTitle(filename);
+        if (title.includes("STAIRWAY")) return "STAIRWAY TO HEAVEN";
         if (title.includes("CONTROL")) return "SELF CONTROL";
         if (title.includes("WONDERWALL")) return "WONDERWALL";
         return "SELF CONTROL"; // Default to Self Control
@@ -305,22 +296,29 @@
         if (!data) return;
 
         currentSongData = data.lyrics;
-        songTitleElement.textContent = songKey;
-        songArtistElement.textContent = data.artist;
-        albumArtElement.src = data.defaultImage; // Reset to default placeholder
 
         if (localFile) {
+            // Set fallback title/artist based on filename formatting
+            songTitleElement.textContent = formatTitle(localFile.name);
+            songArtistElement.textContent = 'LOCAL FILE';
+            albumArtElement.src = data.defaultImage; // Use DB image as temporary fallback until tags are read
+            
             fileNameDisplay.textContent = `LOADED: ${localFile.name.toUpperCase()}`;
             fileNameDisplay.style.color = "var(--accent-cyan)";
-            extractArtwork(localFile);
+            extractMetadata(localFile); // This will attempt to override the fallback
+            playBtn.disabled = false;
         } else {
-            fileNameDisplay.textContent = "NOTE: Simulated YouTube load active.";
+            // Default/YouTube Simulation setting (use DB data)
+            songTitleElement.textContent = songKey;
+            songArtistElement.textContent = data.artist;
+            albumArtElement.src = data.defaultImage; 
+            
+            fileNameDisplay.textContent = "NOTE: Lyrics loaded. Load local file for playback.";
             fileNameDisplay.style.color = "yellow";
+            playBtn.disabled = true;
         }
         
         renderLyrics();
-        // Enable controls only if media source is set (which it is for local, or simulated for youtube)
-        playBtn.disabled = false;
         stopBtn.disabled = false;
     }
 
@@ -334,23 +332,34 @@
         });
     }
 
-    // --- ARTWORK EXTRACTION (jsmediatags) ---
-    function extractArtwork(file) {
+    // --- METADATA EXTRACTION (jsmediatags) ---
+    function extractMetadata(file) {
         try {
              jsmediatags.read(file, {
                 onSuccess: function(tag) {
+                    const songKey = getSongKeyByFilename(file.name);
+                    
+                    // 1. Title and Artist extraction
+                    if (tag.tags.title) {
+                        songTitleElement.textContent = tag.tags.title.toUpperCase();
+                    }
+                    if (tag.tags.artist) {
+                        songArtistElement.textContent = tag.tags.artist.toUpperCase();
+                    }
+                    
+                    // 2. Artwork extraction
                     if (tag.tags.picture) {
                         const picture = tag.tags.picture;
                         const base64String = arrayBufferToBase64(picture.data);
                         albumArtElement.src = `data:${picture.format};base64,${base64String}`;
-                        fileNameDisplay.textContent += " (Artwork Found)";
-                        fileNameDisplay.style.color = "var(--accent-cyan)";
                     } else {
-                        // console.log("No artwork found in tags.");
+                        // If no artwork in tags, reset to the DB default for the recognized song
+                        albumArtElement.src = songDatabase[songKey].defaultImage;
                     }
                 },
                 onError: function(error) {
                     // console.log("Error reading tags:", error.type);
+                    // If tags fail, title/artist/artwork remains the fallback set in updateUI.
                 }
             });
         } catch(e) {
@@ -406,8 +415,9 @@
             const fileUrl = URL.createObjectURL(file);
             audioPlayer.src = fileUrl;
             
+            // Get the song key based on the filename (for fetching synchronized lyrics)
             const songKey = getSongKeyByFilename(file.name);
-            updateUI(songKey, file);
+            updateUI(songKey, file); // Load lyrics and set filename as fallback title/artist
         }
     });
 
@@ -418,28 +428,20 @@
 
     closeModalBtn.addEventListener('click', () => {
         youtubeModal.classList.add('hidden');
-        youtubeUrlInput.value = '';
     });
 
-    loadYoutubeBtn.addEventListener('click', () => {
-        const url = youtubeUrlInput.value.toUpperCase();
-        youtubeModal.classList.add('hidden');
-        resetPlayerState();
-
-        // SIMULATION LOGIC: Find a matching song key or default
-        let songKey = "SELF CONTROL"; // Default
-        if (url.includes("WONDERWALL")) {
-            songKey = "WONDERWALL";
-        }
-        
-        // Cannot stream YouTube audio. Reset player and inform user.
-        audioPlayer.src = '';
-        
-        updateUI(songKey, null); // Load static lyrics
-        
-        fileNameDisplay.textContent = `⚠️ YOUTUBE LOAD SIMULATED. Audio file required for playback.`;
-        fileNameDisplay.style.color = "#FFD700"; // Gold/Warning color
-        playBtn.disabled = true; // Disable play button as no audio source is loaded
+    // Handle song selection from the simulated YouTube modal
+    loadYoutubeSongBtns.forEach(button => {
+        button.addEventListener('click', (event) => {
+            const songKey = event.target.getAttribute('data-song');
+            youtubeModal.classList.add('hidden');
+            
+            // Clear any local file in the player
+            audioPlayer.src = '';
+            
+            resetPlayerState();
+            updateUI(songKey, null); // Load static lyrics for simulation
+        });
     });
 
 
@@ -478,10 +480,8 @@
     // Initial load
     document.addEventListener('DOMContentLoaded', init);
     function init() {
-        updateUI("SELF CONTROL", null); // Initial load of default song data
-        // Set play/stop to disabled until a local file is chosen
-        playBtn.disabled = true;
-        stopBtn.disabled = true;
+        // Load default song data (Self Control)
+        updateUI("SELF CONTROL", null); 
     }
 
   </script>
